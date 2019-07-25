@@ -153,6 +153,240 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-JS封装的气泡动画" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/07/25/JS封装的气泡动画/">JS封装的canvas气泡动画</a>
+    </h1>
+  
+
+        
+        <a href="/2019/07/25/JS封装的气泡动画/" class="archive-article-date">
+  	<time datetime="2019-07-25T01:54:44.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-07-25</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="缘由"><a href="#缘由" class="headerlink" title="缘由"></a>缘由</h1><p>最近在实现一些动效较多的可视化页面，需要一个气泡生成的动画，就写了这段代码。</p>
+<h1 id="逻辑"><a href="#逻辑" class="headerlink" title="逻辑"></a>逻辑</h1><p>首先需要传入一个canvas dom，获取其宽高，初始化声明一个特定长度的气泡数组（长度可由外部传入），每个气泡有半径，速度，初始化所在位置等属性。<br>然后需要执行绘制方法，每次绘制前调用clearRect()清空画布，然后window.requestAnimationFrame()循环调用绘制方法。<br>绘制气泡初始化时，可以让位置随机，也可以全在底部生成.每次气泡的高度位置变化，当到达画布顶部时，重新从底部出现。</p>
+<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BubbleAnimate</span> </span>&#123;</span><br><span class="line">    <span class="keyword">constructor</span>(canvas, number=20,radius=6,color=[255,255,255],speed=0.2,speedRandomPercent=0.5,startFull=true) &#123;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.canvas = canvas;</span><br><span class="line">        &#125;<span class="keyword">catch</span>&#123;</span><br><span class="line">            <span class="keyword">throw</span>(<span class="string">"please provide canvas dom"</span>); </span><br><span class="line">            <span class="keyword">return</span> ;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.ctx = canvas.getContext(<span class="string">'2d'</span>);</span><br><span class="line">        <span class="keyword">this</span>.width=canvas.width;</span><br><span class="line">        <span class="keyword">this</span>.height=canvas.height;</span><br><span class="line">        <span class="keyword">this</span>.radius=radius;</span><br><span class="line">        <span class="keyword">this</span>.color=color;</span><br><span class="line">        <span class="keyword">this</span>.speed=speed;</span><br><span class="line">        <span class="keyword">this</span>.bubbles = [];</span><br><span class="line">        <span class="keyword">this</span>.speedRandomPercent=speedRandomPercent;</span><br><span class="line">        <span class="keyword">this</span>.startFull=startFull;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">let</span> i=<span class="number">0</span>; i&lt;number;i++) &#123;</span><br><span class="line">            <span class="keyword">this</span>.bubbles.push(&#123;</span><br><span class="line">                isReborn:<span class="literal">true</span>,</span><br><span class="line">                speed: speed+(<span class="built_in">Math</span>.random()*<span class="number">2</span><span class="number">-1</span>)*speedRandomPercent*speed,</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.renderCanvas();</span><br><span class="line">    &#125;;</span><br><span class="line">    renderCanvas() &#123;</span><br><span class="line">        <span class="keyword">this</span>.ctx.clearRect(<span class="number">0</span>,<span class="number">0</span>,<span class="keyword">this</span>.width,<span class="keyword">this</span>.height);</span><br><span class="line">        <span class="keyword">this</span>.renderBubbles();</span><br><span class="line">        <span class="built_in">window</span>.requestAnimationFrame(<span class="function"><span class="params">()</span> =&gt;</span> <span class="keyword">this</span>.renderCanvas());</span><br><span class="line">    &#125;;</span><br><span class="line">    renderBubbles() &#123;</span><br><span class="line">        <span class="comment">//气泡</span></span><br><span class="line">        <span class="keyword">let</span> initPoint = [<span class="keyword">this</span>.width/<span class="number">2</span>,<span class="keyword">this</span>.height];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">let</span> i = <span class="number">0</span>;i&lt;<span class="keyword">this</span>.bubbles.length;i++) &#123;</span><br><span class="line">            <span class="keyword">let</span> bubble = <span class="keyword">this</span>.bubbles[i];</span><br><span class="line">            <span class="keyword">if</span>(bubble.isReborn) &#123;</span><br><span class="line">                <span class="keyword">let</span> x = (<span class="built_in">Math</span>.random()<span class="number">-0.5</span>)*<span class="keyword">this</span>.width*<span class="number">0.96</span> + initPoint[<span class="number">0</span>];</span><br><span class="line">                <span class="comment">//气泡半径在一定范围内随机生成</span></span><br><span class="line">                <span class="keyword">let</span> bubbleRadius = <span class="keyword">this</span>.radius+ <span class="built_in">Math</span>.floor(<span class="built_in">Math</span>.random()*<span class="number">2</span><span class="number">-1</span>)*<span class="number">0.5</span>;</span><br><span class="line">                <span class="comment">//判断气泡初始化时是否铺满</span></span><br><span class="line">                <span class="keyword">let</span> y = <span class="keyword">this</span>.startFull?<span class="keyword">this</span>.height*<span class="built_in">Math</span>.random():(initPoint[<span class="number">1</span>] - bubbleRadius);</span><br><span class="line">                bubble.radius = bubbleRadius;</span><br><span class="line">                bubble.currentLocation = [x, y];</span><br><span class="line">                <span class="keyword">let</span> opacity = <span class="number">0.2</span> + <span class="number">0.4</span>* <span class="built_in">Math</span>.random();</span><br><span class="line">                bubble.color = <span class="string">`rgba(<span class="subst">$&#123;<span class="keyword">this</span>.color[<span class="number">0</span>]&#125;</span>, <span class="subst">$&#123;<span class="keyword">this</span>.color[<span class="number">1</span>]&#125;</span>,<span class="subst">$&#123;<span class="keyword">this</span>.color[<span class="number">2</span>]&#125;</span>, <span class="subst">$&#123;opacity&#125;</span>)`</span>;</span><br><span class="line">                bubble.isReborn = <span class="literal">false</span>;</span><br><span class="line">            &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">this</span>.renderBubble(bubble);</span><br><span class="line">                <span class="keyword">if</span>(bubble.currentLocation[<span class="number">1</span>]&lt;= bubble.radius)&#123;</span><br><span class="line">                    bubble.isReborn = <span class="literal">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                bubble.currentLocation[<span class="number">1</span>] = bubble.currentLocation[<span class="number">1</span>] -bubble.speed;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    renderBubble(item) &#123;</span><br><span class="line">        <span class="keyword">this</span>.ctx.beginPath();</span><br><span class="line">        <span class="keyword">this</span>.ctx.arc(...item.currentLocation, item.radius, <span class="number">0</span>, <span class="number">2</span>*<span class="built_in">Math</span>.PI);</span><br><span class="line">        <span class="keyword">this</span>.ctx.fillStyle = item.color;</span><br><span class="line">        <span class="keyword">this</span>.ctx.fill();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="演示地址"><a href="#演示地址" class="headerlink" title="演示地址"></a>演示地址</h1><p><a href="https://haofanya.github.io/2019/07/25/bubbleAnimate/" target="_blank" rel="noopener">演示地址</a></p>
+<h1 id="代码地址"><a href="#代码地址" class="headerlink" title="代码地址"></a>代码地址</h1><p><a href="https://github.com/haofanya/funnyWeb/blob/master/bubblesAnimate.html" target="_blank" rel="noopener">代码地址</a></p>
+<h1 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h1><iframe style="border:0;" height="200" width="400" src="/img/bubble.gif">
+
+
+
+</iframe>
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">技术 JavaScript canvas</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/07/25/JS封装的气泡动画/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-bubbleAnimate" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/07/25/bubbleAnimate/">JS封装的canvas气泡动画演示</a>
+    </h1>
+  
+
+        
+        <a href="/2019/07/25/bubbleAnimate/" class="archive-article-date">
+  	<time datetime="2019-07-25T01:54:44.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-07-25</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>气泡动画</title>
+</head>
+<body>
+<canvas id="test-canvas" style="background: rgba(57,176,248,1);"></canvas>
+<script>
+    class BubbleAnimate {
+        constructor(canvas, number=20,radius=6,color=[255,255,255],speed=0.2,speedRandomPercent=0.5,startFull=true) {
+            try{
+                this.canvas = canvas;
+            }catch{
+                throw("please provide canvas dom");
+                return ;
+            }
+            this.ctx = canvas.getContext('2d');
+            this.width=canvas.width;
+            this.height=canvas.height;
+            this.radius=radius;
+            this.color=color;
+            this.speed=speed;
+            this.bubbles = [];
+            this.speedRandomPercent=speedRandomPercent;
+            this.startFull=startFull;
+            for(let i=0; i<number;i++) {
+                this.bubbles.push({
+                    isReborn:true,
+                    speed: speed+(Math.random()*2-1)*speedRandomPercent*speed,
+                });
+            }
+            this.renderCanvas();
+        };
+        renderCanvas() {
+            this.ctx.clearRect(0,0,this.width,this.height);
+            this.renderBubbles();
+            window.requestAnimationFrame(() => this.renderCanvas());
+        };
+        renderBubbles() {
+            //气泡
+            let initPoint = [this.width/2,this.height];
+            for(let i = 0;i<this.bubbles.length;i++) {
+                let bubble = this.bubbles[i];
+                if(bubble.isReborn) {
+                    let x = (Math.random()-0.5)*this.width*0.96 + initPoint[0];
+                    //气泡半径在一定范围内随机生成
+                    let bubbleRadius = this.radius+ Math.floor(Math.random()*2-1)*0.5;
+                    //判断气泡初始化时是否铺满
+                    let y = this.startFull?this.height*Math.random():(initPoint[1] - bubbleRadius);
+                    bubble.radius = bubbleRadius;
+                    bubble.currentLocation = [x, y];
+                    let opacity = 0.2 + 0.4* Math.random();
+                    bubble.color = `rgba(${this.color[0]}, ${this.color[1]},${this.color[2]}, ${opacity})`;
+                    bubble.isReborn = false;
+                }else {
+                    this.renderBubble(bubble);
+                    if(bubble.currentLocation[1]<= bubble.radius){
+                        bubble.isReborn = true;
+                    }
+                    bubble.currentLocation[1] = bubble.currentLocation[1] -bubble.speed;
+                }
+            }
+        }
+        renderBubble(item) {
+            this.ctx.beginPath();
+            this.ctx.arc(...item.currentLocation, item.radius, 0, 2*Math.PI);
+            this.ctx.fillStyle = item.color;
+            this.ctx.fill();
+        }
+    }
+    let canvas = document.getElementById('test-canvas');
+    let bubbleCreater= new BubbleAnimate(canvas);
+    bubbleCreater.renderCanvas();
+</script>
+</body>
+</html>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">技术 JavaScript canvas</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/07/25/bubbleAnimate/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-函数防抖与节流" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -539,11 +773,15 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
           <ul class="article-tag-list" q-show="showTags">
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">测试</a>
+                <a href="javascript:void(0)" class="js-tag color1">技术 JavaScript canvas</a>
               </li>
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">技术</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color3">测试</a>
               </li>
             
             <div class="clearfix"></div>
